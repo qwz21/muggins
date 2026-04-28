@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>머긴스 전략 분석 연구소 v17.0 (최종 완성본)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+        
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #0f172a; color: #f8fafc; display: flex; flex-direction: column; align-items: center; padding: 40px; margin: 0; user-select: none; }
+        h1 { color: #38bdf8; margin-bottom: 5px; font-weight: 900; }
+        .subtitle { color: #94a3b8; margin-bottom: 30px; font-size: 18px; }
+
+        .main-layout { display: flex; gap: 30px; max-width: 1300px; width: 100%; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+
+        /* 보드판 섹션 */
+        .board-section { background-color: #1e293b; padding: 25px; border-radius: 16px; border: 1px solid #334155; flex: 1; min-width: 500px; display: flex; flex-direction: column; }
+        .section-header { margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .section-header h2 { font-size: 20px; color: #facc15; margin: 0; }
+
+        .view-mode-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px; }
+        .view-mode-bar { display: flex; gap: 10px; background: #0f172a; padding: 8px; border-radius: 10px; border: 1px solid #334155; flex-grow: 1; }
+        .view-btn { flex: 1; background: transparent; color: #94a3b8; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 700; transition: all 0.2s; }
+        .view-btn:hover { color: #f8fafc; background: #334155; }
+        .view-btn.active { background: #38bdf8; color: #0f172a; }
+
+        .sort-bar { display: flex; gap: 10px; margin-bottom: 20px; opacity: 0.3; pointer-events: none; transition: opacity 0.5s; }
+        .sort-bar.active { opacity: 1; pointer-events: all; }
+        .sort-btn { background-color: #0f172a; color: #94a3b8; border: 1px solid #334155; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 700; transition: all 0.2s; flex: 1; }
+        .sort-btn.selected { background-color: #475569; color: #fff; }
+
+        .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+        .cell {
+            background-color: #334155; border-radius: 8px; height: 75px; display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            font-weight: 900; font-size: 24px; color: white; cursor: pointer; transition: background-color 0.3s ease, transform 0.2s; position: relative; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .cell:hover { transform: scale(1.05) !important; z-index: 10; outline: 2px solid #fff; }
+        .cell .data-label { font-size: 12px; font-weight: 700; opacity: 0.9; margin-top: 2px; }
+        .cell .point-badge { position: absolute; top: -5px; right: -5px; background: #eab308; color: #0f172a; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; display: flex; justify-content: center; align-items: center; font-weight: 900; border: 2px solid #1e293b; display: none; }
+
+        .cell.highlight { border: 3px solid #22c55e !important; box-shadow: 0 0 20px #22c55e; transform: scale(1.08); z-index: 5; animation: pulseGreen 1.5s infinite alternate; }
+        @keyframes pulseGreen { 0% { box-shadow: 0 0 10px #22c55e; } 100% { box-shadow: 0 0 30px #22c55e; } }
+
+        .legend-container { display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 20px; white-space: nowrap; }
+        .color-bar { width: 180px; height: 10px; background: linear-gradient(to right, #3b82f6, #eab308, #ef4444); border-radius: 5px; }
+
+        /* 사이드 패널 */
+        .side-section { display: flex; flex-direction: column; gap: 20px; width: 380px; }
+        .panel { background-color: #1e293b; padding: 20px; border-radius: 16px; border: 1px solid #334155; }
+        .panel h3 { margin-top: 0; color: #38bdf8; font-size: 18px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+
+        .settings-box { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px dashed #475569; }
+        .setting-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #cbd5e1; margin-bottom: 10px; }
+        
+        .btn { border: none; border-radius: 8px; cursor: pointer; font-weight: 700; transition: all 0.2s; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        .btn-primary { background: linear-gradient(135deg, #0284c7, #2563eb); color: white; padding: 15px; font-size: 18px; margin-bottom: 5px; }
+        .btn-green { background: #22c55e; color: #0f172a; padding: 12px; font-size: 15px; margin-top: 10px; }
+        .btn-yellow { background: #eab308; color: #0f172a; padding: 10px; font-size: 14px; }
+        
+        .info-box { background-color: #0f172a; padding: 15px; border-radius: 8px; border-left: 4px solid #eab308; margin-bottom: 15px; }
+        .info-box p { margin: 5px 0 0 0; font-size: 13px; color: #cbd5e1; line-height: 1.5; }
+
+        .dice-calc-inputs { display: flex; gap: 10px; margin-bottom: 10px; }
+        .dice-input { width: 100%; background: #0f172a; border: 1px solid #334155; color: #22c55e; padding: 10px; border-radius: 8px; font-size: 26px; text-align: center; font-weight: 900; outline: none; }
+        .dice-rolling { color: #eab308 !important; border-color: #eab308 !important; animation: slotSpin 0.1s infinite alternate; }
+        @keyframes slotSpin { 0% { transform: translateY(-2px); } 100% { transform: translateY(2px); } }
+
+        /* 🔍 분석 결과 섹션 (Conclusion) */
+        .analysis-results { width: 100%; max-width: 1300px; margin-top: 30px; display: none; }
+        .results-header { color: #facc15; font-size: 22px; font-weight: 900; margin-bottom: 15px; border-left: 5px solid #facc15; padding-left: 15px; }
+        .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; }
+        .result-card { background: #1e293b; padding: 18px; border-radius: 12px; border: 1px solid #334155; position: relative; transition: transform 0.3s; }
+        .result-card:hover { transform: translateY(-5px); border-color: #38bdf8; }
+        .result-card h4 { margin: 0 0 8px 0; color: #38bdf8; font-size: 16px; }
+        .result-card p { margin: 0; color: #94a3b8; font-size: 13px; line-height: 1.6; }
+        .result-tag { position: absolute; top: 10px; right: 10px; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 900; }
+
+        /* 모달 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .modal-content { background-color: #1e293b; padding: 30px; border-radius: 16px; width: 550px; border: 2px solid #38bdf8; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-header { border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 15px; display: flex; align-items: center; gap: 15px; }
+        .modal-num { background: #38bdf8; color: #0f172a; width: 55px; height: 55px; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 28px; font-weight: 900; }
+        
+        .survival-dash { background: #0f172a; border-radius: 10px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-around; border: 1px solid #334155; }
+        .surv-stat { display: flex; flex-direction: column; align-items: center; }
+        .surv-title { font-size: 11px; font-weight: 700; margin-bottom: 3px; }
+        .surv-value { font-size: 22px; font-weight: 900; }
+        
+        .combo-list { max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .combo-item { background: #0f172a; padding: 12px 15px; border-radius: 6px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #334155; }
+        .eq-text { font-family: monospace; font-weight: 700; color: #64ffda; }
+    </style>
+</head>
+<body>
+
+    <h1>머긴스(Muggins) 밸런싱 연구소 v17.0</h1>
+    <div class="subtitle">수학적 데이터 분석과 게임 디자인 밸런싱의 결합</div>
+
+    <div class="main-layout">
+        <div class="board-section">
+            <div class="section-header">
+                <h2>📊 확률 히트맵</h2>
+                <span id="totalStats" style="font-size: 13px; color: #94a3b8;">분석 대기 중...</span>
+            </div>
+
+            <div class="view-mode-container">
+                <div class="view-mode-bar">
+                    <button class="view-btn active" id="view-prob" onclick="setViewMode('prob')">📊 확률 %</button>
+                    <button class="view-btn" id="view-score" onclick="setViewMode('score')">✏️ 점수 패치</button>
+                    <button class="view-btn" id="view-ev" onclick="setViewMode('ev')">⚖️ 기댓값 EV</button>
+                </div>
+                <button id="resetScoreBtn" class="btn btn-secondary" style="display: none; width: auto;" onclick="resetScores()">🔄 리셋</button>
+            </div>
+
+            <div class="sort-bar" id="sortBar">
+                <button class="sort-btn selected" id="sort-num" onclick="sortGrid('num')">🔢 숫자 순</button>
+                <button class="sort-btn" id="sort-desc" onclick="sortGrid('desc')">🔼 높은 순</button>
+                <button class="sort-btn" id="sort-asc" onclick="sortGrid('asc')">🔽 낮은 순</button>
+            </div>
+
+            <div class="grid" id="boardGrid"></div>
+            
+            <div class="legend-container">
+                <span style="color: #3b82f6; font-weight: 700; font-size: 13px;">Cold</span>
+                <div class="color-bar"></div>
+                <span style="color: #ef4444; font-weight: 700; font-size: 13px;">Hot</span>
+            </div>
+        </div>
+
+        <div class="side-section">
+            <div class="panel">
+                <h3>🚀 시뮬레이션 설정</h3>
+                <div class="settings-box">
+                    <div class="setting-row">
+                        <span>🎲 주사위:</span>
+                        <div style="display:flex; gap:8px;">
+                            <label><input type="radio" name="diceType" value="4"> 4</label>
+                            <label><input type="radio" name="diceType" value="6" checked> 6</label>
+                            <label><input type="radio" name="diceType" value="8"> 8</label>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <span>🧮 연산자:</span>
+                        <div style="display:flex; gap:5px;">
+                            <label><input type="checkbox" id="opAdd" checked>+</label>
+                            <label><input type="checkbox" id="opSub" checked>-</label>
+                            <label><input type="checkbox" id="opMul" checked>×</label>
+                            <label><input type="checkbox" id="opDiv" checked>÷</label>
+                        </div>
+                    </div>
+                    <div class="setting-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed #475569;">
+                        <label><input type="checkbox" id="opParen" checked> ( ) 괄호 사용 허용</label>
+                    </div>
+                </div>
+                <button id="runBtn" class="btn btn-primary" onclick="runFullAnalysis()">🔥 분석 시작 (애니메이션)</button>
+            </div>
+
+            <div class="panel" style="border-color: #22c55e;">
+                <h3 style="color: #22c55e;">🎯 슬롯 계산기</h3>
+                <div class="dice-calc-inputs">
+                    <input type="number" id="d1" class="dice-input" placeholder="?">
+                    <input type="number" id="d2" class="dice-input" placeholder="?">
+                    <input type="number" id="d3" class="dice-input" placeholder="?">
+                </div>
+                <div class="action-row">
+                    <button class="btn btn-yellow" id="btnRoll" onclick="rollRandomDiceSlot()">🎰 굴리기</button>
+                    <button class="btn btn-secondary" onclick="resetDiceCalc()">🔄 리셋</button>
+                </div>
+                <button class="btn btn-green" onclick="calcSpecificDice()">🟢 경로 탐색</button>
+            </div>
+
+            <div class="info-box">
+                <span style="color:#eab308; font-weight:900;">💡 기댓값(EV)이란?</span>
+                <p>로또처럼 '확률 × 상금'을 계산한 진짜 가치야. 확률이 낮아도 점수를 높이면 기댓값이 커져서 공평해질 수 있어!</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="analysis-results" id="resultsSection">
+        <div class="results-header">🔍 데이터가 찾아낸 5가지 비밀</div>
+        <div class="results-grid">
+            <div class="result-card">
+                <span class="result-tag" style="background:#ef4444; color:#fff;">DANGER</span>
+                <h4>1. Hot Zone의 양날의 검</h4>
+                <p>10~18번은 들어가기 제일 쉽지만, 상대방도 언제든 나를 쫓아낼 수 있어. 가장 치열한 전쟁터이자 리스크가 큰 곳이야.</p>
+            </div>
+            <div class="result-card">
+                <span class="result-tag" style="background:#3b82f6; color:#fff;">SAFE</span>
+                <h4>2. 불모지의 철벽 요새</h4>
+                <p>30번대 Cold Zone은 도달하기 극히 힘들지만, 한 번 점령하면 상대가 나를 공격할 확률도 0.1% 미만인 '무적의 성'이 돼.</p>
+            </div>
+            <div class="result-card">
+                <span class="result-tag" style="background:#eab308; color:#000;">MATH</span>
+                <h4>3. 수학적 교차로 현상</h4>
+                <p>중앙 구역은 덧셈, 뺄셈, 곱셈의 모든 결과값이 중첩되는 구역이야. 다양한 수식 경로가 존재해서 빈도가 폭발적으로 높아.</p>
+            </div>
+            <div class="result-card">
+                <span class="result-tag" style="background:#22c55e; color:#fff;">STRATEGY</span>
+                <h4>4. 괄호의 마법적 힘</h4>
+                <p>괄호를 허용하는 것만으로도 전체 보드판의 도달 가능한 경로가 수만 개나 늘어나. 괄호는 점령지를 넓히는 핵심 무기야.</p>
+            </div>
+            <div class="result-card">
+                <span class="result-tag" style="background:#64ffda; color:#000;">BALANCE</span>
+                <h4>5. 황금 밸런스의 정답</h4>
+                <p>모든 칸의 기댓값(EV)이 비슷해질 때 가장 공평한 게임이 돼. 확률이 낮은 Cold Zone에 높은 점수를 패치해야 하는 이유지.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal" onclick="this.style.display='none'">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-num" id="mNum">?</div>
+                <div><h3 style="margin:0; color:#fff;">구역 정밀 분석</h3><span id="mCount" style="font-size:12px; color:#94a3b8;">조합: 0개</span></div>
+            </div>
+            <div class="survival-dash">
+                <div class="surv-stat"><span class="surv-title" style="color:#ef4444;">💀 피격 위험</span><span class="surv-value" id="mRisk">0%</span></div>
+                <div class="surv-stat"><span class="surv-title" style="color:#22c55e;">🛡️ 생존율</span><span class="surv-value" id="mSurv">100%</span></div>
+            </div>
+            <div class="combo-list" id="mList"></div>
+        </div>
+    </div>
+
+    <script>
+        const ops = [{s:'+',f:(a,b)=>a+b,p:1},{s:'-',f:(a,b)=>a-b,p:1},{s:'×',f:(a,b)=>a*b,p:2},{s:'÷',f:(a,b)=>(b!==0&&a%b===0)?a/b:null,p:2}];
+        let freqMap={}, combosMap={}, isAnalyzed=false, activeSearchDiceStr=null, currentMaxDice=6, totalPaths=0, maxProb=0, maxEv=0, viewMode='prob', cellPoints=new Array(37).fill(1), evData=new Array(37).fill(0);
+
+        const grid = document.getElementById('boardGrid');
+        for (let i=1; i<=36; i++) {
+            freqMap[i]=0; combosMap[i]=new Map();
+            const cell = document.createElement('div'); cell.className='cell'; cell.id=`c-${i}`; cell.dataset.num=i; cell.style.order=i;
+            cell.innerHTML=`<div>${i}</div><div class="data-label" id="dl-${i}">0%</div><div class="point-badge" id="pb-${i}">1</div>`;
+            cell.onclick=()=>handleCellClick(i); grid.appendChild(cell);
+        }
+
+        function solve(arr, activeOps, useParen) {
+            let res = []; if(!activeOps.length) return res;
+            function perms(a){if(a.length<=1)return[a];let r=[];for(let i=0;i<a.length;i++){let rest=perms(a.slice(0,i).concat(a.slice(i+1)));for(let x of rest)r.push([a[i],...x]);}return r;}
+            perms(arr).forEach(p=>{const [n1,n2,n3]=p;activeOps.forEach(o1=>{activeOps.forEach(o2=>{
+                if(useParen){let s1=o1.f(n1,n2);if(s1!==null){let r1=o2.f(s1,n3);if(r1>=1&&r1<=36)res.push({v:r1,e:`(${n1}${o1.s}${n2})${o2.s}${n3}`});}
+                             let s2=o2.f(n2,n3);if(s2!==null){let r2=o1.f(n1,s2);if(r2>=1&&r2<=36)res.push({v:r2,e:`${n1}${o1.s}(${n2}${o2.s}${n3})`});}}
+                else{if(o1.p>=o2.p){let s1=o1.f(n1,n2);if(s1!==null){let r1=o2.f(s1,n3);if(r1>=1&&r1<=36)res.push({v:r1,e:`${n1}${o1.s}${n2}${o2.s}${n3}`});}}
+                     else{let s2=o2.f(n2,n3);if(s2!==null){let r2=o1.f(n1,s2);if(r2>=1&&r2<=36)res.push({v:r2,e:`${n1}${o1.s}${n2}${o2.s}${n3}`});}}}
+            });});});return res;
+        }
+
+        function runFullAnalysis() {
+            const active = []; if(document.getElementById('opAdd').checked)active.push(ops[0]); if(document.getElementById('opSub').checked)active.push(ops[1]); if(document.getElementById('opMul').checked)active.push(ops[2]); if(document.getElementById('opDiv').checked)active.push(ops[3]);
+            if(!active.length){alert("연산자를 선택하세요.");return;}
+            const btn=document.getElementById('runBtn'), useParen=document.getElementById('opParen').checked;
+            btn.disabled=true; btn.innerText="⏳ 계산 및 렌더링 중...";
+            currentMaxDice=parseInt(document.querySelector('input[name="diceType"]:checked').value);
+            totalPaths=0; maxProb=0; maxEv=0; for(let i=1;i<=36;i++){freqMap[i]=0; combosMap[i].clear();}
+            for(let d1=1;d1<=currentMaxDice;d1++)for(let d2=1;d2<=currentMaxDice;d2++)for(let d3=1;d3<=currentMaxDice;d3++){
+                const diceStr=`[${[d1,d2,d3].sort().join(', ')}]`, res=solve([d1,d2,d3],active,useParen), uniques=new Set();
+                res.forEach(item=>{uniques.add(item.v);if(!combosMap[item.v].has(diceStr))combosMap[item.v].set(diceStr,item.e);});
+                uniques.forEach(n=>{freqMap[n]++; totalPaths++;});
+            }
+            for(let i=1;i<=36;i++){const p=totalPaths>0?freqMap[i]/totalPaths:0; if(p>maxProb)maxProb=p; evData[i]=p*cellPoints[i]; if(evData[i]>maxEv)maxEv=evData[i];}
+            setViewMode('prob');
+            let delay=0; for(let i=1;i<=36;i++){setTimeout(()=>{renderSingleCell(i);const c=document.getElementById(`c-${i}`);c.style.transform='scale(1.15)';setTimeout(()=>c.style.transform='scale(1)',150);},delay);delay+=30;}
+            setTimeout(()=>{isAnalyzed=true; document.getElementById('totalStats').innerText=`유효 조합: ${totalPaths.toLocaleString()}개`; document.getElementById('sortBar').classList.add('active'); document.getElementById('resultsSection').style.display='block'; btn.innerText="✅ 분석 완료"; btn.disabled=false;},delay+200);
+        }
+
+        function renderSingleCell(i) {
+            const cell=document.getElementById(`c-${i}`), label=document.getElementById(`dl-${i}`), badge=document.getElementById(`pb-${i}`);
+            const prob=totalPaths>0?freqMap[i]/totalPaths:0, ev=prob*cellPoints[i];
+            let ratio=0; if(viewMode==='prob'){ratio=maxProb>0?prob/maxProb:0; label.innerText=`${(prob*100).toFixed(1)}%`; badge.style.display=cellPoints[i]>1?'flex':'none'; cell.dataset.val=prob;}
+            else if(viewMode==='score'){ratio=cellPoints[i]/10; label.innerText=`${cellPoints[i]} Pt`; badge.style.display='none'; cell.dataset.val=cellPoints[i];}
+            else{ratio=maxEv>0?ev/maxEv:0; label.innerText=`EV: ${ev.toFixed(2)}`; badge.style.display='flex'; cell.dataset.val=ev;}
+            let r,g,b; if(prob===0&&viewMode!=='score'){r=30;g=41;b=59;} else if(ratio<0.5){let n=ratio/0.5; r=59+(234-59)*n; g=130+(179-130)*n; b=246+(8-246)*n;} else{let n=(ratio-0.5)/0.5; r=234+(239-234)*n; g=179+(68-179)*n; b=8+(68-8)*n;}
+            cell.style.backgroundColor=`rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`; cell.style.color=(r*0.3+g*0.6+b*0.1)>150?'#0f172a':'#fff';
+        }
+
+        function setViewMode(mode){if(!isAnalyzed)return; viewMode=mode; document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active')); document.getElementById(`view-${mode}`).classList.add('active');
+            document.getElementById('resetScoreBtn').style.display=(mode==='score'?'block':'none'); for(let i=1;i<=36;i++)renderSingleCell(i); sortGrid(document.querySelector('.sort-btn.selected').id.replace('sort-',''));}
+
+        function resetScores(){cellPoints.fill(1); for(let i=1;i<=36;i++){document.getElementById(`pb-${i}`).innerText=1;renderSingleCell(i);} sortGrid('num');}
+
+        function handleCellClick(n){if(!isAnalyzed)return; if(viewMode==='score'){cellPoints[n]=cellPoints[n]>=10?1:cellPoints[n]+1; document.getElementById(`pb-${n}`).innerText=cellPoints[n]; renderSingleCell(n);} else showDetail(n);}
+
+        function sortGrid(t){if(!isAnalyzed)return; document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('selected')); document.getElementById(`sort-${t}`).classList.add('selected');
+            const cells=Array.from(document.querySelectorAll('.cell')); if(t==='num')cells.forEach(c=>c.style.order=c.dataset.num);
+            else{const s=[...cells].sort((a,b)=>t==='desc'?b.dataset.val-a.dataset.val:a.dataset.val-b.dataset.val); s.forEach((c,idx)=>c.style.order=idx);}}
+
+        function rollRandomDiceSlot(){if(!isAnalyzed)return; const inputs=[document.getElementById('d1'),document.getElementById('d2'),document.getElementById('d3')];
+            inputs.forEach(i=>i.classList.add('dice-rolling')); let r=0; const timer=setInterval(()=>{inputs.forEach(i=>i.value=Math.floor(Math.random()*currentMaxDice)+1); if(++r>=15){clearInterval(timer); inputs.forEach(i=>i.classList.remove('dice-rolling')); calcSpecificDice();}},60);}
+
+        function resetDiceCalc(){const inputs=[document.getElementById('d1'),document.getElementById('d2'),document.getElementById('d3')]; inputs.forEach(i=>i.value=''); document.querySelectorAll('.cell').forEach(c=>c.classList.remove('highlight')); activeSearchDiceStr=null;}
+
+        function calcSpecificDice(){if(!isAnalyzed)return; const d=[parseInt(document.getElementById('d1').value),parseInt(document.getElementById('d2').value),parseInt(document.getElementById('d3').value)];
+            if(d.some(isNaN))return; document.querySelectorAll('.cell').forEach(c=>c.classList.remove('highlight'));
+            activeSearchDiceStr=`[${d.sort().join(', ')}]`; const res=solve(d, (()=>{const a=[];if(document.getElementById('opAdd').checked)a.push(ops[0]);if(document.getElementById('opSub').checked)a.push(ops[1]);if(document.getElementById('opMul').checked)a.push(ops[2]);if(document.getElementById('opDiv').checked)a.push(ops[3]);return a;})(), document.getElementById('opParen').checked);
+            [...new Set(res.map(r=>r.v))].forEach(n=>document.getElementById(`c-${n}`).classList.add('highlight'));}
+
+        function showDetail(n){const risk=totalPaths>0?freqMap[n]/totalPaths*100:0; document.getElementById('mNum').innerText=n; document.getElementById('mRisk').innerText=`${risk.toFixed(1)}%`; document.getElementById('mSurv').innerText=`${(100-risk).toFixed(1)}%`;
+            const isH=document.getElementById(`c-${n}`).classList.contains('highlight'), data=isH?Array.from(combosMap[n].entries()).filter(e=>e[0]===activeSearchDiceStr):Array.from(combosMap[n].entries());
+            document.getElementById('mCount').innerText = `조합: ${data.length}개`;
+            document.getElementById('mList').innerHTML=data.map(d=>`<div class="combo-item"><span>🎲 ${d[0]}</span><span class="eq-text">${d[1]}=${n}</span></div>`).join(''); document.getElementById('modal').style.display='flex';}
+
+        function resetDiceCalc(){const inputs=[document.getElementById('d1'),document.getElementById('d2'),document.getElementById('d3')]; inputs.forEach(i=>i.value=''); document.querySelectorAll('.cell').forEach(c=>c.classList.remove('highlight')); activeSearchDiceStr=null;}
+    </script>
+</body>
+</html>
